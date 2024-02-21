@@ -12,8 +12,6 @@ import mlflow
 from tools.utils import create_folder, set_seed, FocalLoss
 from datetime import datetime
 from torch.optim.lr_scheduler import ExponentialLR
-# from ignite.handlers.param_scheduler import create_lr_scheduler_with_warmup
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-name", "--name", type=str, help="Name of the experiment", default="view-gcn")
