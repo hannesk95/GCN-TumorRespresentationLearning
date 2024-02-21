@@ -2,11 +2,11 @@ import numpy as np
 import torch
 import torch.optim as optim
 import argparse
-from tools.Trainer import ModelNetTrainer
-from tools.Dataset import SingleImgDataset3D, MultiviewImgDataset3D
+from Trainer import ModelNetTrainer
+from Dataset import SingleImgDataset3D, MultiviewImgDataset3D
 from model.models import CNN, GNN
 import mlflow
-from tools.utils import create_folder, set_seed, FocalLoss
+from utils import create_folder, set_seed, FocalLoss
 from datetime import datetime
 
 parser = argparse.ArgumentParser()
@@ -95,7 +95,7 @@ if __name__ == '__main__':
                                       test_loader=[test_loader], optimizer=optimizer, loss_fn=loss_fn, model_name='cnn', 
                                       log_dir=log_dir, lr_scheduler=lr_scheduler) 
         
-        trainer.train(1)
+        trainer.train(100)
 
     ##############################################################
     # Load Best CNN Model ########################################

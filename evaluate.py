@@ -6,11 +6,11 @@ import torch.nn as nn
 import os, shutil, json
 from torch.autograd import Variable
 import argparse
-from tools.Trainer import ModelNetTrainer
-from tools.Dataset import MultiviewImgDataset, SingleImgDataset, SingleImgDataset3D, MultiviewImgDataset3D
+from Trainer import ModelNetTrainer
+from Dataset import MultiviewImgDataset, SingleImgDataset, SingleImgDataset3D, MultiviewImgDataset3D
 from model.models import view_GCN, SVCNN, GNN
 import mlflow
-from tools.utils import set_seed, create_folder
+from utils import set_seed, create_folder
 from tqdm import tqdm
 from sklearn.metrics import f1_score, balanced_accuracy_score, confusion_matrix, matthews_corrcoef, roc_auc_score
 import matplotlib.pyplot as plt
