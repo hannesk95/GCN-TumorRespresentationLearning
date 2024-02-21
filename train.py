@@ -4,13 +4,12 @@ import torch.optim as optim
 import argparse
 from Trainer import ModelNetTrainer
 from Dataset import SingleImgDataset3D, MultiviewImgDataset3D
-from model.models import CNN, GNN
+from models.Model import CNN, GNN
 import mlflow
 from utils import create_folder, set_seed, FocalLoss
 from datetime import datetime
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-name", "--name", type=str, help="Name of the experiment", default="view-gcn")
 parser.add_argument("-dataset", "--dataset", type=str, help="Name of the dataset", default="NSCLC")
 parser.add_argument("-bs", "--batchSize", type=int, help="Batch size for the second stage", default=16)
 parser.add_argument("-cnn_name", "--cnn_name", type=str, help="cnn model name", default="ResNet18-3D")
@@ -36,7 +35,7 @@ if __name__ == '__main__':
         confusion_matrix_dir = log_dir+"/ConfusionMatrices"
         create_folder(confusion_matrix_dir)        
 
-        cnn = CNN(args.name, nclasses=2, pretraining=args.pretrained, cnn_name=args.cnn_name).cuda()
+        cnn = CNN(nclasses=2, pretraining=args.pretrained, cnn_name=args.cnn_name).cuda()
         pytorch_total_params = sum(p.numel() for p in cnn.parameters() if p.requires_grad)
         mlflow.log_param("n_parameters", pytorch_total_params)
         print(f"Number of Parameters: {pytorch_total_params}")
@@ -102,7 +101,7 @@ if __name__ == '__main__':
     ##############################################################    
 
     model_path = ""
-    cnn = CNN(args.name, nclasses=2, pretraining=args.pretrained, cnn_name=args.cnn_name)
+    cnn = CNN(nclasses=2, pretraining=args.pretrained, cnn_name=args.cnn_name)
     cnn.load_state_dict(torch.load(model_path))
 
     ##############################################################
