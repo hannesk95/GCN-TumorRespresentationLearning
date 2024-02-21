@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import os
 import glob
+
+
 class Model(nn.Module):
 
     def __init__(self, name):
@@ -31,5 +33,4 @@ class Model(nn.Module):
             mf = os.path.join(complete_path, modelfile)
 
         self.load_state_dict(torch.load(mf))
-
 

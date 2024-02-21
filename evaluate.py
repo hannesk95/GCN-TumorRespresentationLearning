@@ -7,8 +7,8 @@ import os, shutil, json
 from torch.autograd import Variable
 import argparse
 from tools.Trainer import ModelNetTrainer
-from tools.ImgDataset import MultiviewImgDataset, SingleImgDataset, SingleImgDataset3D, MultiviewImgDataset3D
-from model.view_gcn import view_GCN, SVCNN, GNN
+from tools.Dataset import MultiviewImgDataset, SingleImgDataset, SingleImgDataset3D, MultiviewImgDataset3D
+from model.models import view_GCN, SVCNN, GNN
 import mlflow
 from tools.utils import set_seed, create_folder
 from tqdm import tqdm
