@@ -29,18 +29,18 @@ class SingleImgDataset3D(torch.utils.data.Dataset):
             files_ids = [file.split("/")[-1].split("_")[0] for file in files]
 
             labels = sorted([label for label in all_labels if label.split("/")[-1].split("_")[0] in files_ids])
-            labels_binary = [0 if "adeno" in label else 1 for label in labels]
+            labels_binary = [0 if "adeno" in label else 1 if "squamous" in label else np.nan for label in labels]
 
             self.train_imgs, self.val_imgs, self.labels_train, self.labels_val = train_test_split(files, labels_binary, train_size=0.6, 
-                                                                                                  random_state=28, stratify=labels_binary)
+                                                                                                  random_state=42, stratify=labels_binary)
             
             self.val_imgs, self.test_imgs, self.labels_val, self.labels_test = train_test_split(self.val_imgs, self.labels_val, test_size=0.5,
-                                                                                                random_state=28, stratify=self.labels_val)
+                                                                                                random_state=42, stratify=self.labels_val)
 
-            test_val_images = self.test_imgs + self.val_imgs
-            test_val_labels = self.labels_test + self.labels_val      
+            # test_val_images = self.test_imgs + self.val_imgs
+            # test_val_labels = self.labels_test + self.labels_val      
    
-            self.test_imgs, self.labels_test = shuffle(test_val_images, test_val_labels, random_state=42)
+            # self.test_imgs, self.labels_test = shuffle(test_val_images, test_val_labels, random_state=42)
 
         elif self.dataset == "RADCURE":
             self.filepaths = sorted(glob("/home/johannes/Desktop/MICCAI24/data/RADCURE/volume+seg/*crimgnew.pt"))
