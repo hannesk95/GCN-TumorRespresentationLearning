@@ -31,7 +31,7 @@ if __name__ == '__main__':
     with mlflow.start_run(run_name=date):
 
         mlflow.log_params(args.__dict__)
-        log_dir = 'experiments/'+f'{args.cnn_name}_{date}'
+        log_dir = 'experiments/'+f'{args.dataset}_{args.cnn_name}_{date}'
         create_folder(log_dir)
         confusion_matrix_dir = log_dir+"/ConfusionMatrices"
         create_folder(confusion_matrix_dir)        
@@ -91,8 +91,8 @@ if __name__ == '__main__':
                                       log_dir=log_dir, lr_scheduler=lr_scheduler)  
               
         elif args.dataset == "NSCLC":
-            trainer = ModelNetTrainer(model=cnn, train_loader=train_loader, val_loader=[val_loader], 
-                                      test_loader=[test_loader], optimizer=optimizer, loss_fn=loss_fn, model_name='cnn', 
+            trainer = ModelNetTrainer(model=cnn, train_loader=train_loader, val_loader=[test_loader], 
+                                      test_loader=[val_loader], optimizer=optimizer, loss_fn=loss_fn, model_name='cnn', 
                                       log_dir=log_dir, lr_scheduler=lr_scheduler) 
         
         trainer.train(250)
@@ -114,12 +114,12 @@ if __name__ == '__main__':
     date = str(datetime.now().strftime('%Y-%m-%d_%H:%M:%S'))
     with mlflow.start_run(run_name=date):        
 
-        n_augmentations = 12
+        n_augmentations = 8
         batch_size = 8
         mlflow.log_param("batch_size", batch_size)
         mlflow.log_param("n_augmentations", n_augmentations)
 
-        log_dir = 'experiments/'+f'GNN_{date}'
+        log_dir = 'experiments/'+f'{args.dataset}_GNN_{date}'
         create_folder(log_dir)
         confusion_matrix_dir = log_dir+"/ConfusionMatrices"
         create_folder(confusion_matrix_dir)
