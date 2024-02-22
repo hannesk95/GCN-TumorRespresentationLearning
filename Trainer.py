@@ -160,7 +160,8 @@ class ModelNetTrainer(object):
             mlflow.log_artifact(f"{self.log_dir}/ConfusionMatrices")
 
             if mode == "val":
-                split = str(loader_instance.dataset.split)
+                # split = str(loader_instance.dataset.split)
+                split = 0
                 mlflow.log_metric(f"val_loss_{split}", loss, step=epoch)
                 mlflow.log_metric(f"val_bacc_{split}", bacc, step=epoch)
                 mlflow.log_metric(f"val_f1_{split}", f1, step=epoch)

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
-from .ResNet import create_resnet
+# from .ResNet import create_resnet
 from torch_geometric.nn.conv import SAGEConv
 from torch_geometric.data import Data, Batch
 from torch_geometric.nn import global_mean_pool, knn_graph
@@ -43,11 +43,11 @@ class CNN(nn.Module):
             self.net.fc.apply(self.init_weights)   
             
         elif self.cnn_name == "ResNet50-3D":
-            self.net = create_resnet(input_channel=1, model_depth=50, norm=nn.BatchNorm3d, model_num_class=self.nclasses)
+            # self.net = create_resnet(input_channel=1, model_depth=50, norm=nn.BatchNorm3d, model_num_class=self.nclasses)
             self.net.fc = nn.Linear(512, self.nclasses)
 
         elif self.cnn_name == "ResNet101-3D":
-            self.net = create_resnet(input_channel=1, model_depth=101, norm=nn.BatchNorm3d, model_num_class=self.nclasses)
+            # self.net = create_resnet(input_channel=1, model_depth=101, norm=nn.BatchNorm3d, model_num_class=self.nclasses)
             self.net.fc = nn.Linear(512, self.nclasses)            
 
         if not self.pretraining:
@@ -72,11 +72,12 @@ class CNN(nn.Module):
         
 
 class GNN(nn.Module):
-    def __init__(self, name, cnn, freeze_cnn, n_augmentations):
+    def __init__(self, name, cnn, freeze_cnn, n_augmentations, n_neighbors):
         super(GNN, self).__init__()
         
         self.name = name
 
+        self.n_neighbors = n_neighbors
         self.n_augmentations = n_augmentations
 
         self.cnn_encoder = nn.Sequential(*list(cnn.net.children())[:-1])
@@ -86,10 +87,10 @@ class GNN(nn.Module):
                 param.requires_grad = False        
 
         # GNN layers
-        self.conv1 = SAGEConv(512, 512)
-        self.conv2 = SAGEConv(512, 512)
-        self.conv3 = SAGEConv(512, 512)
-        self.cls = nn.Linear(512, 2)
+        self.conv1 = SAGEConv(512, 128)
+        # self.conv2 = SAGEConv(512, 512)
+        # self.conv3 = SAGEConv(512, 512)
+        self.cls = nn.Linear(128, 2)
         
     def forward(self, x):
 
@@ -105,7 +106,7 @@ class GNN(nn.Module):
         for i in range(encodings.shape[0]):
             temp = encodings[i]
             data = Data(pos=temp)
-            edge_index = knn_graph(data.pos, k=3, loop=True, cosine=True)
+            edge_index = knn_graph(data.pos, k=self.n_neighbors)
             data.edge_index = edge_index
             knn_graphs.append(data)
         
@@ -118,10 +119,11 @@ class GNN(nn.Module):
 
         # 3. GNN
         x = self.conv1(x, edge_index)
-        x = nn.LeakyReLU(0.2, inplace=True)(x)      
-        x = self.conv2(x, edge_index)
-        x = nn.LeakyReLU(0.2, inplace=True)(x)
-        x = self.conv3(x, edge_index)
+        x = nn.ReLU()(x)
+        # x = nn.LeakyReLU(0.2, inplace=True)(x)      
+        # x = self.conv2(x, edge_index)
+        # x = nn.LeakyReLU(0.2, inplace=True)(x)
+        # x = self.conv3(x, edge_index)
         x = global_mean_pool(x, batch)
         # x = F.dropout(x, p=0.3, training=self.training)
         x = self.cls(x)
