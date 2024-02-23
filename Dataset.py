@@ -2,6 +2,7 @@ import numpy as np
 from glob import glob
 import torch.utils.data
 import torch
+import os
 import torchio as tio
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.model_selection import train_test_split
@@ -51,23 +52,23 @@ class SingleImgDataset3D(torch.utils.data.Dataset):
             val_ids = torch.load("/home/johannes/Desktop/MICCAI24/data/RADCURE/X_val_RADCURE_split.pt")
             test_ids = torch.load("/home/johannes/Desktop/MICCAI24/data/RADCURE/X_test_RADCURE_split.pt")
 
-            val_test = val_ids + test_ids
-            np.random.shuffle(val_test,)
-            half_size = int(len(val_test)/2)
-            val_ids = val_test[:half_size]
-            test_ids = val_test[half_size:]
+            # val_test = val_ids + test_ids
+            # np.random.shuffle(val_test,)
+            # half_size = int(len(val_test)/2)
+            # val_ids = val_test[:half_size]
+            # test_ids = val_test[half_size:]
 
             self.train_imgs = [path for path in self.filepaths if path.split("/")[-1].split("_")[0] in train_ids]
             self.val_imgs = [path for path in self.filepaths if path.split("/")[-1].split("_")[0] in val_ids]
             self.test_imgs = [path for path in self.filepaths if path.split("/")[-1].split("_")[0] in test_ids]
 
-            if self.mode == "val":
-                if self.split == 0:
-                    self.val_imgs = self.val_imgs[:60]
-                elif self.split == 1:
-                    self.val_imgs = self.val_imgs[60:120]
-                else:
-                    self.val_imgs = self.val_imgs[120:]                
+            # if self.mode == "val":
+            #     if self.split == 0:
+            #         self.val_imgs = self.val_imgs[:60]
+            #     elif self.split == 1:
+            #         self.val_imgs = self.val_imgs[60:120]
+            #     else:
+            #         self.val_imgs = self.val_imgs[120:]                
 
             self.train_labels = [path for path in self.labelpaths if path.split("/")[-1].split("_")[0] in train_ids]
             self.val_labels = [path for path in self.labelpaths if path.split("/")[-1].split("_")[0] in val_ids]
@@ -156,7 +157,65 @@ class SingleImgDataset3D(torch.utils.data.Dataset):
     def clip(self, volume):
         min_value = torch.quantile(volume, 0.05)
         max_value = torch.quantile(volume, 0.95)
-        return torch.clamp(volume, min=min_value, max=max_value)    
+        return torch.clamp(volume, min=min_value, max=max_value) 
+
+class AugmentationDataset3D(torch.utils.data.Dataset):
+    def __init__(self, path, mode):
+
+        self.mode = mode
+
+        train_feature_paths = sorted(glob(os.path.join(path, "train_features*.pt")))[:1]
+        val_feature_paths = sorted(glob(os.path.join(path, "val_features*.pt")))[:1]
+        test_feature_paths = sorted(glob(os.path.join(path, "test_features*.pt")))[:1]
+
+        train_data = [torch.load(path).unsqueeze(0) for path in train_feature_paths]
+        val_data = [torch.load(path).unsqueeze(0) for path in val_feature_paths]
+        test_data = [torch.load(path).unsqueeze(0) for path in test_feature_paths]
+
+        self.train_data = torch.concat(train_data, dim=0).to(torch.float32)
+        self.val_data = torch.concat(val_data, dim=0).to(torch.float32)
+        self.test_data = torch.concat(test_data, dim=0).to(torch.float32)
+        
+        self.train_labels = torch.load(os.path.join(path, "train_labels.pt")).to(torch.long)
+        self.val_labels = torch.load(os.path.join(path, "val_labels.pt")).to(torch.long)
+        self.test_labels = torch.load(os.path.join(path, "test_labels.pt")).to(torch.long)
+
+        self.class_weights = torch.tensor(compute_class_weight(class_weight="balanced", 
+                                                               classes=np.unique(self.train_labels.numpy()), 
+                                                               y=self.train_labels.numpy())).to(torch.float32).cuda()
+
+
+        if self.mode == "train":
+            self.filepaths = self.train_data
+        elif self.mode == "val":
+            self.filepaths = self.val_data
+        else:
+            self.filepaths = self.test_data
+
+    def __len__(self):
+        if self.mode == "train":
+            return self.train_data.shape[1]
+        elif self.mode == "val":
+            return self.val_data.shape[1]
+        else:
+            return self.test_data.shape[1]
+        
+    def __getitem__(self, idx):
+
+        if self.mode == "train":
+            data = self.train_data
+            labels = self.train_labels
+        elif self.mode == "val":
+            data = self.val_data
+            labels = self.val_labels
+        elif self.mode == "test":
+            data = self.test_data
+            labels = self.test_labels
+
+        patient_data = data[:, idx, :].to(torch.float32)
+        patient_label = labels[idx].to(torch.float32)
+
+        return patient_label, patient_data
  
     
 class MultiviewImgDataset3D(torch.utils.data.Dataset):

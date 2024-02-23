@@ -2,9 +2,14 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 # from .ResNet import create_resnet
-from torch_geometric.nn.conv import SAGEConv
+from torch_geometric.nn.conv import SAGEConv, GATConv
+from torch_geometric.nn import MLP, Sequential
 from torch_geometric.data import Data, Batch
-from torch_geometric.nn import global_mean_pool, knn_graph
+from torch_geometric.nn import global_mean_pool, knn_graph, global_max_pool
+import networkx as nx
+import torch_geometric
+import matplotlib.pyplot as plt
+from torch_geometric.transforms import NormalizeScale
 
 
 class CNN(nn.Module):
@@ -72,10 +77,10 @@ class CNN(nn.Module):
         
 
 class GNN(nn.Module):
-    def __init__(self, name, cnn, freeze_cnn, n_augmentations, n_neighbors):
+    def __init__(self, mode, cnn, freeze_cnn, n_augmentations, n_neighbors):
         super(GNN, self).__init__()
         
-        self.name = name
+        self.mode = mode
 
         self.n_neighbors = n_neighbors
         self.n_augmentations = n_augmentations
@@ -87,27 +92,57 @@ class GNN(nn.Module):
                 param.requires_grad = False        
 
         # GNN layers
-        self.conv1 = SAGEConv(512, 128)
+        # self.conv1 = SAGEConv(512, 128)
         # self.conv2 = SAGEConv(512, 512)
         # self.conv3 = SAGEConv(512, 512)
-        self.cls = nn.Linear(128, 2)
+                
+        in_channels = 512
+        hidden_channels = 512
+        out_channels = 512
+        num_layers = 3
+
+        self.gnn = Sequential('x, edge_index', [
+            (GATConv(in_channels, hidden_channels), 'x, edge_index -> x'),
+            nn.ReLU(inplace=True),
+            (GATConv(hidden_channels, hidden_channels), 'x, edge_index -> x'),
+            nn.ReLU(inplace=True),
+            (GATConv(hidden_channels, out_channels), 'x, edge_index -> x')
+        ])
+        
+        # MLP layers
+        self.mlp = MLP(in_channels=512, hidden_channels=512, out_channels=512, num_layers=num_layers)
+
+        # Classification head
+        self.cls = nn.Linear(out_channels, 2)
+
+
         
     def forward(self, x):
 
-        # 1. Get 3DResNet18 encodings
-        encodings = []
-        for i in range(self.n_augmentations):
-            temp = x[:, i, :, :, :].unsqueeze(1)
-            encodings.append(self.cnn_encoder(temp).squeeze().unsqueeze(1))        
-        encodings = torch.concatenate(encodings, dim=1)
+        # (old) 1. Get 3DResNet18 encodings
+        # encodings = []
+        # for i in range(self.n_augmentations):
+        #     temp = x[:, i, :, :, :].unsqueeze(1)
+        #     encodings.append(self.cnn_encoder(temp).squeeze().unsqueeze(1))        
+        # encodings = torch.concatenate(encodings, dim=1)
+
+        encodings = x
 
         # 2. Graph Module
         knn_graphs = []
         for i in range(encodings.shape[0]):
             temp = encodings[i]
             data = Data(pos=temp)
-            edge_index = knn_graph(data.pos, k=self.n_neighbors)
+            edge_index = knn_graph(data.pos, k=self.n_neighbors, cosine=False)
             data.edge_index = edge_index
+            g = torch_geometric.utils.to_networkx(data, to_undirected=True)
+            fig = plt.figure()
+            nx.draw(g)
+            fig.savefig(f"./graph.png")
+            plt.close(fig)
+            
+            data = NormalizeScale()(data=data)
+
             knn_graphs.append(data)
         
         graphs = Batch().from_data_list(knn_graphs)
@@ -118,13 +153,20 @@ class GNN(nn.Module):
         # encodings, adjacency_matrix, _ = DGM_c(encodings)
 
         # 3. GNN
-        x = self.conv1(x, edge_index)
-        x = nn.ReLU()(x)
+        # x = self.conv1(x, edge_index)
+        # x = nn.ReLU()(x)
         # x = nn.LeakyReLU(0.2, inplace=True)(x)      
         # x = self.conv2(x, edge_index)
         # x = nn.LeakyReLU(0.2, inplace=True)(x)
         # x = self.conv3(x, edge_index)
-        x = global_mean_pool(x, batch)
+
+        if self.mode == "MLP":
+            x = self.mlp(x, edge_index)
+        
+        elif self.mode == "GNN":
+            x = self.gnn(x, edge_index)
+
+        x = global_max_pool(x, batch)
         # x = F.dropout(x, p=0.3, training=self.training)
         x = self.cls(x)
 

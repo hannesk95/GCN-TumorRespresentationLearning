@@ -38,7 +38,7 @@ def evaluate(model, loader):
         val_test_pred.extend(pred.detach().cpu().numpy())
         val_test_score.extend(score.detach().cpu().numpy())
         probabilities.extend(torch.softmax(out_data, dim=1).detach().cpu().numpy())        
-        features.extend(feature.detach().cpu())  
+        features.append(feature.detach().cpu())  
        
     f1 = f1_score(val_test_true, val_test_pred, average="macro")
     mcc = matthews_corrcoef(val_test_true, val_test_pred)
@@ -61,12 +61,12 @@ def evaluate(model, loader):
 if __name__ == '__main__': 
 
     set_seed(seed=28)
-    model_path = '/home/johannes/Code/TumorRepresentationLearningGCN/experiments/NSCLC_ResNet18-3D_2024-02-22_09:33:50/model-250.pth'
+    # model_path = '/home/johannes/Code/TumorRepresentationLearningGCN/experiments/NSCLC_ResNet18-3D_2024-02-22_09:33:50/model-250.pth'
+    model_path = '/home/johannes/Code/TumorRepresentationLearningGCN/experiments/RADCURE_ResNet18-3D_2024-02-19_12:07:28/model-100.pth'
     
-    test_time_augmentation = True 
-    test_time_aggregation = "mean"
-    test_time_augmentations = 5
-    dataset = "NSCLC"
+    test_time_augmentation = False 
+    test_time_augmentations = 1
+    dataset = "RADCURE"
 
     cnn = CNN(nclasses=2, cnn_name="ResNet18-3D").cuda()
     cnn.load_state_dict(torch.load(model_path))
@@ -86,57 +86,50 @@ if __name__ == '__main__':
     print('num_val_files: '+str(len(val_dataset.filepaths)))
     print('num_test_files: '+str(len(test_dataset.filepaths)))
 
-    if not test_time_augmentation:
+    f1_list = []
+    mcc_list = []
+    auc_list = []
+    bacc_list = []
+    scores = np.zeros((len(test_dataset.filepaths), 2)) ####
 
-        for i in range(test_time_augmentations):
-            with torch.no_grad():
-                f1, mcc, auc, bacc, true, pred, score, probs = evaluate(model=cnn, loader=test_loader)
-    
-    else:
+    with torch.no_grad():
+        for i in range(test_time_augmentations):                   
+            
+            # test_dataset = SingleImgDataset3D(dataset=dataset, mode="test", cnn_name="ResNet18-3D")
+            # indices = np.arange(start=0, stop=len(test_dataset), step=1)
+            
+            # bootstrap
+            # indices, _ = shuffle(indices, indices, random_state=i)
+            # indices = indices[:72]
 
-        f1_list = []
-        mcc_list = []
-        auc_list = []
-        bacc_list = []
-        scores = np.zeros((len(train_dataset.filepaths), 2))
+            # cross-validation
+            # split_length = int(np.floor(len(indices)/5))
+            # indices = indices[i*split_length:(i+1)*split_length]
 
-        with torch.no_grad():
-            for i in range(test_time_augmentations):                   
-                
-                # test_dataset = SingleImgDataset3D(dataset=dataset, mode="test", cnn_name="ResNet18-3D")
-                # indices = np.arange(start=0, stop=len(test_dataset), step=1)
-                
-                # bootstrap
-                # indices, _ = shuffle(indices, indices, random_state=i)
-                # indices = indices[:72]
+            # test_subset = torch.utils.data.Subset(test_dataset, indices)
+            # test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=4)
 
-                # cross-validation
-                # split_length = int(np.floor(len(indices)/5))
-                # indices = indices[i*split_length:(i+1)*split_length]
+            f1, mcc, auc, bacc, true, pred, score, probs, features = evaluate(model=cnn, loader=val_loader) ####
 
-                # test_subset = torch.utils.data.Subset(test_dataset, indices)
-                # test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=4)
+            f1_list.append(f1)
+            mcc_list.append(mcc)
+            auc_list.append(auc)
+            bacc_list.append(bacc)
+            scores += probs
 
-                f1, mcc, auc, bacc, true, pred, score, probs, features = evaluate(model=cnn, loader=train_loader)
-
-                f1_list.append(f1)
-                mcc_list.append(mcc)
-                auc_list.append(auc)
-                bacc_list.append(bacc)
-                scores += probs
-
-                path = Path(model_path)
-                parent_path = path.parent.absolute()
-                torch.save(features, f"{parent_path}/train_features{str(i).zfill(2)}.pt")
-
+            path = Path(model_path)
+            parent_path = path.parent.absolute()
+            # torch.save(features, f"{parent_path}/train_features{str(i).zfill(2)}.pt") ####
+            # torch.save(torch.tensor(train_dataset.labels_train), f"{parent_path}/train_labels.pt") ####
 
     pred = torch.max(torch.tensor(scores), dim=1)[1]
     score = torch.softmax(torch.tensor(scores), dim=1)[:, 1] 
 
-    print(f"AUC:  {roc_auc_score(true, score)}")
-    print(f"MCC:  {matthews_corrcoef(true, pred)}")
-    print(f"BACC: {balanced_accuracy_score(true, pred)}")
     print(f"F1:   {f1_score(true, pred, average='macro')}")
+    print(f"BACC: {balanced_accuracy_score(true, pred)}")
+    print(f"MCC:  {matthews_corrcoef(true, pred)}")
+    print(f"AUC:  {roc_auc_score(true, score)}")   
+    
 
     print(f"F1-Score: {np.mean(f1_list)}")
     print(f"std:      {np.std(f1_list)}")

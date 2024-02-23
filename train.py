@@ -1,20 +1,23 @@
+import sys
 import torch
 import mlflow
 import argparse
 import numpy as np
 import torch.optim as optim
+from pathlib import Path
+import torch.nn as nn
 
 from datetime import datetime
 from models.Model import CNN, GNN
 from Trainer import ModelNetTrainer
 from utils import create_folder, set_seed, FocalLoss
-from Dataset import SingleImgDataset3D, MultiviewImgDataset3D
+from Dataset import SingleImgDataset3D, MultiviewImgDataset3D, AugmentationDataset3D
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-dataset", "--dataset", type=str, help="Name of the dataset", default="NSCLC")
 parser.add_argument("-bs", "--batchSize", type=int, help="Batch size for the second stage", default=16)
 parser.add_argument("-cnn_name", "--cnn_name", type=str, help="cnn model name", default="ResNet18-3D")
-parser.add_argument("-lr", type=float, help="learning rate", default=0.001)
+parser.add_argument("-lr", type=float, help="learning rate", default=0.01)
 parser.set_defaults(pretrained=True)
 args = parser.parse_args()
 
@@ -25,7 +28,7 @@ if __name__ == '__main__':
     # Train 3DResNet ##############################################
     ###############################################################
 
-    # set_seed(seed=28)
+    # set_seed(seed=42)
     # mlflow.set_experiment(f"CNN-{args.dataset}")
     # date = str(datetime.now().strftime('%Y-%m-%d_%H:%M:%S'))
     # with mlflow.start_run(run_name=date):
@@ -47,37 +50,37 @@ if __name__ == '__main__':
     #     train_dataset = SingleImgDataset3D(dataset=args.dataset, mode="train", cnn_name=args.cnn_name)
     #     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batchSize, shuffle=True, num_workers=4)
         
-    #     if args.dataset == "RADCURE":
-    #         val_dataset0 = SingleImgDataset3D(dataset=args.dataset, mode="val", cnn_name=args.cnn_name, split=0)
-    #         val_loader0 = torch.utils.data.DataLoader(val_dataset0, batch_size=args.batchSize, shuffle=False, num_workers=4)
+    #     # if args.dataset == "RADCURE":
+    #     #     val_dataset0 = SingleImgDataset3D(dataset=args.dataset, mode="val", cnn_name=args.cnn_name, split=0)
+    #     #     val_loader0 = torch.utils.data.DataLoader(val_dataset0, batch_size=args.batchSize, shuffle=False, num_workers=4)
 
-    #         val_dataset1 = SingleImgDataset3D(dataset=args.dataset, mode="val", cnn_name=args.cnn_name, split=1)
-    #         val_loader1 = torch.utils.data.DataLoader(val_dataset1, batch_size=args.batchSize, shuffle=False, num_workers=4)
+    #     #     val_dataset1 = SingleImgDataset3D(dataset=args.dataset, mode="val", cnn_name=args.cnn_name, split=1)
+    #     #     val_loader1 = torch.utils.data.DataLoader(val_dataset1, batch_size=args.batchSize, shuffle=False, num_workers=4)
 
-    #         val_dataset2 = SingleImgDataset3D(dataset=args.dataset, mode="val", cnn_name=args.cnn_name, split=2)
-    #         val_loader2 = torch.utils.data.DataLoader(val_dataset2, batch_size=args.batchSize, shuffle=False, num_workers=4)
+    #     #     val_dataset2 = SingleImgDataset3D(dataset=args.dataset, mode="val", cnn_name=args.cnn_name, split=2)
+    #     #     val_loader2 = torch.utils.data.DataLoader(val_dataset2, batch_size=args.batchSize, shuffle=False, num_workers=4)
         
-    #     else:
-    #         val_dataset = SingleImgDataset3D(dataset=args.dataset, mode="val", cnn_name=args.cnn_name, split=0)
-    #         val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batchSize, shuffle=False, num_workers=4)
+    #     # else:
+    #     val_dataset = SingleImgDataset3D(dataset=args.dataset, mode="val", cnn_name=args.cnn_name, split=0)
+    #     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batchSize, shuffle=False, num_workers=4)
         
     #     test_dataset = SingleImgDataset3D(dataset=args.dataset, mode="test", cnn_name=args.cnn_name)
     #     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batchSize, shuffle=False, num_workers=4)
         
     #     print('num_train_files: '+str(len(train_dataset.filepaths)))
-    #     if args.dataset == "RADCURE":
-    #         print('num_val_files: '+str(len(val_dataset0.filepaths)))
-    #         print('num_val_files: '+str(len(val_dataset1.filepaths)))
-    #         print('num_val_files: '+str(len(val_dataset2.filepaths)))
-    #     else:
-    #         print('num_val_files: '+str(len(val_dataset.filepaths)))
+    #     # if args.dataset == "RADCURE":
+    #     #     print('num_val_files: '+str(len(val_dataset0.filepaths)))
+    #     #     print('num_val_files: '+str(len(val_dataset1.filepaths)))
+    #     #     print('num_val_files: '+str(len(val_dataset2.filepaths)))
+    #     # else:
+    #     print('num_val_files: '+str(len(val_dataset.filepaths)))
     #     print('num_test_files: '+str(len(test_dataset.filepaths)))
 
     #     lr_scheduler = {"learning_rate": args.lr,
     #                     "warmup_start_value": args.lr / 100, 
     #                     "warmup_end_value": args.lr,
-    #                     "warmup_period": 50, 
-    #                     "discount_factor": 0.999,
+    #                     "warmup_period": 25, 
+    #                     "discount_factor": 0.9955,
     #                     "discount_mode": "exponential"}
         
     #     mlflow.log_params(lr_scheduler)
@@ -86,8 +89,8 @@ if __name__ == '__main__':
     #     loss_fn = FocalLoss(weight=train_dataset.class_weights, reduction="mean")
 
     #     if args.dataset == "RADCURE":
-    #         trainer = ModelNetTrainer(model=cnn, train_loader=train_loader, val_loader=[val_loader0, val_loader1, val_loader2], 
-    #                                   test_loader=test_loader, optimizer=optimizer, loss_fn=loss_fn, model_name='cnn', 
+    #         trainer = ModelNetTrainer(model=cnn, train_loader=train_loader, val_loader=[test_loader], 
+    #                                   test_loader=[val_loader], optimizer=optimizer, loss_fn=loss_fn, model_name='cnn', 
     #                                   log_dir=log_dir, lr_scheduler=lr_scheduler)  
               
     #     elif args.dataset == "NSCLC":
@@ -95,7 +98,9 @@ if __name__ == '__main__':
     #                                   test_loader=[val_loader], optimizer=optimizer, loss_fn=loss_fn, model_name='cnn', 
     #                                   log_dir=log_dir, lr_scheduler=lr_scheduler) 
         
-    #     trainer.train(250)
+    #     trainer.train(300)
+
+    # sys.exit()
 
     ##############################################################
     # Load Best CNN Model ########################################
@@ -115,8 +120,8 @@ if __name__ == '__main__':
     with mlflow.start_run(run_name=date):        
 
         n_augmentations = 8
-        batch_size = 4
-        n_neighbors = 3
+        batch_size = 1
+        n_neighbors = 25
         args.lr = 0.01
         mlflow.log_param("batch_size", batch_size)
         mlflow.log_param("n_augmentations", n_augmentations)
@@ -127,7 +132,7 @@ if __name__ == '__main__':
         confusion_matrix_dir = log_dir+"/ConfusionMatrices"
         create_folder(confusion_matrix_dir)
 
-        gnn = GNN(name="gnn", cnn=cnn, freeze_cnn=True, n_augmentations=n_augmentations, n_neighbors=n_neighbors).cuda()
+        gnn = GNN(mode="GNN", cnn=cnn, freeze_cnn=False, n_augmentations=n_augmentations, n_neighbors=n_neighbors).cuda()
         pytorch_total_params = sum(p.numel() for p in gnn.parameters() if p.requires_grad)
         mlflow.log_param("n_parameters", pytorch_total_params)
         print(f"Number of Parameters: {pytorch_total_params}")
@@ -137,30 +142,42 @@ if __name__ == '__main__':
 
         # scales = np.random.uniform(0.95, 1.05, n_augmentations)
         # degrees = np.random.uniform(-10, 10, n_augmentations)
-        translations = np.random.uniform(-20, 20, n_augmentations).astype(int)
-        flips = np.random.randint(0, 3, n_augmentations)
+        # translations = np.random.uniform(-20, 20, n_augmentations).astype(int)
+        # flips = np.random.randint(0, 3, n_augmentations)
 
-        train_dataset = MultiviewImgDataset3D(dataset=args.dataset, mode="train", n_augmentations=n_augmentations, flips=flips, translations=translations)
+        path = Path(model_path)
+        parent_path = path.parent.absolute()
+
+        train_dataset = AugmentationDataset3D(path=parent_path, mode="train")
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
         
-        val_dataset = MultiviewImgDataset3D(dataset=args.dataset, mode="val", n_augmentations=n_augmentations, flips=flips, translations=translations)
-        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4, drop_last=True)
+        val_dataset = AugmentationDataset3D(path=parent_path, mode="val")
+        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
+        
+        test_dataset = AugmentationDataset3D(path=parent_path, mode="test")
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
 
-        test_dataset = MultiviewImgDataset3D(dataset=args.dataset, mode="test", n_augmentations=n_augmentations, flips=flips, translations=translations)
-        test_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4, drop_last=True)
+        # train_dataset = MultiviewImgDataset3D(dataset=args.dataset, mode="train", n_augmentations=n_augmentations, flips=flips, translations=translations)
+        # train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
+        
+        # val_dataset = MultiviewImgDataset3D(dataset=args.dataset, mode="val", n_augmentations=n_augmentations, flips=flips, translations=translations)
+        # val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4, drop_last=True)
+
+        # test_dataset = MultiviewImgDataset3D(dataset=args.dataset, mode="test", n_augmentations=n_augmentations, flips=flips, translations=translations)
+        # test_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4, drop_last=True)
         
         print('num_train_files: '+str(len(train_dataset.filepaths)))
         print('num_val_files: '+str(len(val_dataset.filepaths)))
         print('num_val_files: '+str(len(test_dataset.filepaths)))
 
-        # loss_fn = nn.CrossEntropyLoss(weight=train_dataset.class_weights)
-        loss_fn = FocalLoss(weight=train_dataset.class_weights, reduction="mean")
+        loss_fn = nn.CrossEntropyLoss(weight=train_dataset.class_weights)
+        # loss_fn = FocalLoss(weight=train_dataset.class_weights, reduction="mean")
 
         lr_scheduler = {"learning_rate": args.lr,
                         "warmup_start_value": args.lr / 100, 
                         "warmup_end_value": args.lr,
                         "warmup_period": 3, 
-                        "discount_factor": 1.0,
+                        "discount_factor": 0.99,
                         "discount_mode": "exponential"}
         
         mlflow.log_params(lr_scheduler)

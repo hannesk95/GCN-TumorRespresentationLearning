@@ -58,7 +58,7 @@ class ModelNetTrainer(object):
                 score = torch.softmax(out_data, dim=1)[:, 1]
 
                 f1_loss_value = f1_loss(target, score)
-                loss = self.loss_fn(out_data, target) + f1_loss_value
+                loss = self.loss_fn(out_data, target) #+ f1_loss_value
                 loss.backward()
                 self.optimizer.step()
                 
