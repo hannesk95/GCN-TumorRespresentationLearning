@@ -119,9 +119,9 @@ if __name__ == '__main__':
     date = str(datetime.now().strftime('%Y-%m-%d_%H:%M:%S'))
     with mlflow.start_run(run_name=date):        
 
-        n_augmentations = 8
-        batch_size = 1
-        n_neighbors = 25
+        n_augmentations = 20
+        batch_size = 16
+        n_neighbors = 20
         args.lr = 0.01
         mlflow.log_param("batch_size", batch_size)
         mlflow.log_param("n_augmentations", n_augmentations)
@@ -148,13 +148,13 @@ if __name__ == '__main__':
         path = Path(model_path)
         parent_path = path.parent.absolute()
 
-        train_dataset = AugmentationDataset3D(path=parent_path, mode="train")
+        train_dataset = AugmentationDataset3D(path=parent_path, mode="train", n_augmentations=n_augmentations)
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
         
-        val_dataset = AugmentationDataset3D(path=parent_path, mode="val")
+        val_dataset = AugmentationDataset3D(path=parent_path, mode="val", n_augmentations=n_augmentations)
         val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
         
-        test_dataset = AugmentationDataset3D(path=parent_path, mode="test")
+        test_dataset = AugmentationDataset3D(path=parent_path, mode="test", n_augmentations=n_augmentations)
         test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
 
         # train_dataset = MultiviewImgDataset3D(dataset=args.dataset, mode="train", n_augmentations=n_augmentations, flips=flips, translations=translations)
@@ -166,18 +166,18 @@ if __name__ == '__main__':
         # test_dataset = MultiviewImgDataset3D(dataset=args.dataset, mode="test", n_augmentations=n_augmentations, flips=flips, translations=translations)
         # test_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4, drop_last=True)
         
-        print('num_train_files: '+str(len(train_dataset.filepaths)))
-        print('num_val_files: '+str(len(val_dataset.filepaths)))
-        print('num_val_files: '+str(len(test_dataset.filepaths)))
+        print('num_train_files: '+str(train_dataset.filepaths.shape[1]))
+        print('num_val_files: '+str(val_dataset.filepaths.shape[1]))
+        print('num_val_files: '+str(test_dataset.filepaths.shape[1]))
 
         loss_fn = nn.CrossEntropyLoss(weight=train_dataset.class_weights)
-        # loss_fn = FocalLoss(weight=train_dataset.class_weights, reduction="mean")
+        loss_fn = FocalLoss(weight=train_dataset.class_weights, reduction="mean")
 
         lr_scheduler = {"learning_rate": args.lr,
                         "warmup_start_value": args.lr / 100, 
                         "warmup_end_value": args.lr,
                         "warmup_period": 3, 
-                        "discount_factor": 0.99,
+                        "discount_factor": 1.00,
                         "discount_mode": "exponential"}
         
         mlflow.log_params(lr_scheduler)

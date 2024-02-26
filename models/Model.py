@@ -85,11 +85,11 @@ class GNN(nn.Module):
         self.n_neighbors = n_neighbors
         self.n_augmentations = n_augmentations
 
-        self.cnn_encoder = nn.Sequential(*list(cnn.net.children())[:-1])
+        # self.cnn_encoder = nn.Sequential(*list(cnn.net.children())[:-1])
 
-        if freeze_cnn:
-            for param in self.cnn_encoder.parameters():
-                param.requires_grad = False        
+        # if freeze_cnn:
+        #     for param in self.cnn_encoder.parameters():
+        #         param.requires_grad = False        
 
         # GNN layers
         # self.conv1 = SAGEConv(512, 128)
@@ -103,9 +103,9 @@ class GNN(nn.Module):
 
         self.gnn = Sequential('x, edge_index', [
             (GATConv(in_channels, hidden_channels), 'x, edge_index -> x'),
-            nn.ReLU(inplace=True),
+            nn.ReLU(inplace=True), nn.BatchNorm1d(hidden_channels),
             (GATConv(hidden_channels, hidden_channels), 'x, edge_index -> x'),
-            nn.ReLU(inplace=True),
+            nn.ReLU(inplace=True), nn.BatchNorm1d(hidden_channels),
             (GATConv(hidden_channels, out_channels), 'x, edge_index -> x')
         ])
         
@@ -141,7 +141,7 @@ class GNN(nn.Module):
             fig.savefig(f"./graph.png")
             plt.close(fig)
             
-            data = NormalizeScale()(data=data)
+            # data = NormalizeScale()(data=data)
 
             knn_graphs.append(data)
         

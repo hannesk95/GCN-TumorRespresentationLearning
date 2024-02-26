@@ -160,13 +160,14 @@ class SingleImgDataset3D(torch.utils.data.Dataset):
         return torch.clamp(volume, min=min_value, max=max_value) 
 
 class AugmentationDataset3D(torch.utils.data.Dataset):
-    def __init__(self, path, mode):
+    def __init__(self, path, mode, n_augmentations):
 
         self.mode = mode
+        self.n_augmentations = n_augmentations
 
-        train_feature_paths = sorted(glob(os.path.join(path, "train_features*.pt")))[:1]
-        val_feature_paths = sorted(glob(os.path.join(path, "val_features*.pt")))[:1]
-        test_feature_paths = sorted(glob(os.path.join(path, "test_features*.pt")))[:1]
+        train_feature_paths = sorted(glob(os.path.join(path, "train_features*.pt")))[:n_augmentations]
+        val_feature_paths = sorted(glob(os.path.join(path, "val_features*.pt")))[:n_augmentations]
+        test_feature_paths = sorted(glob(os.path.join(path, "test_features*.pt")))[:n_augmentations]
 
         train_data = [torch.load(path).unsqueeze(0) for path in train_feature_paths]
         val_data = [torch.load(path).unsqueeze(0) for path in val_feature_paths]
