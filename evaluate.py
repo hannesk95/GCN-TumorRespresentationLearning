@@ -7,7 +7,11 @@ from Dataset import SingleImgDataset3D
 from models.Model import CNN
 from utils import set_seed
 from tqdm import tqdm
-from sklearn.metrics import f1_score, balanced_accuracy_score, confusion_matrix, matthews_corrcoef, roc_auc_score
+from sklearn.metrics import f1_score
+from sklearn.metrics import balanced_accuracy_score
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import matthews_corrcoef
+from sklearn.metrics import roc_auc_score
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.utils import shuffle
@@ -66,14 +70,17 @@ def evaluate(model: Callable[[CNN]] , loader: Iterable[torch.utils.data.Dataload
     fig.savefig(f'eval_results/confusion_matrix.png')
     plt.close(fig)
 
-    return f1, mcc, auc, bacc, val_test_true, val_test_pred, val_test_score, np.array(probabilities), torch.concat(features, dim=0)
+    return f1, mcc, auc, bacc, val_test_true, val_test_pred, val_test_score, \
+        np.array(probabilities), torch.concat(features, dim=0)
 
-
-if __name__ == '__main__':
+def main():
+    """Main function."""
 
     set_seed(seed=28)
-    # model_path = '/home/johannes/Code/TumorRepresentationLearningGCN/experiments/NSCLC_ResNet18-3D_2024-02-22_09:33:50/model-250.pth'
-    model_path = '/home/johannes/Code/TumorRepresentationLearningGCN/experiments/RADCURE_ResNet18-3D_2024-02-19_12:07:28/model-100.pth'
+    # model_path = '/home/johannes/Code/TumorRepresentationLearningGCN/\
+    #     experiments/NSCLC_ResNet18-3D_2024-02-22_09:33:50/model-250.pth'
+    model_path = '/home/johannes/Code/TumorRepresentationLearningGCN/\
+        experiments/RADCURE_ResNet18-3D_2024-02-19_12:07:28/model-100.pth'
 
     test_time_augmentation = False
     test_time_augmentations = 1
@@ -84,13 +91,16 @@ if __name__ == '__main__':
     pytorch_total_params = sum(p.numel() for p in cnn.parameters() if p.requires_grad)
     print(f'Number of Parameters: {pytorch_total_params}')
 
-    train_dataset = SingleImgDataset3D(dataset=dataset, mode='train', cnn_name='ResNet18-3D', tta=test_time_augmentation)
+    train_dataset = SingleImgDataset3D(dataset=dataset, mode='train', cnn_name='ResNet18-3D',
+                                       tta=test_time_augmentation)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4)
 
-    val_dataset = SingleImgDataset3D(dataset=dataset, mode='val', cnn_name='ResNet18-3D', tta=test_time_augmentation)
+    val_dataset = SingleImgDataset3D(dataset=dataset, mode='val', cnn_name='ResNet18-3D',
+                                     tta=test_time_augmentation)
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=4)
 
-    test_dataset = SingleImgDataset3D(dataset=dataset, mode='test', cnn_name='ResNet18-3D', tta=test_time_augmentation)
+    test_dataset = SingleImgDataset3D(dataset=dataset, mode='test', cnn_name='ResNet18-3D',
+                                      tta=test_time_augmentation)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=4)
 
     print('num_train_files: '+str(len(train_dataset.filepaths)))
@@ -153,3 +163,6 @@ if __name__ == '__main__':
     torch.save(true, 'eval_results/true.pt')
     torch.save(pred, 'eval_results/pred.pt')
     torch.save(score, 'eval_results/score.pt')
+
+if __name__ == '__main__':
+    main()
