@@ -2,9 +2,36 @@
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.2.0
+    rev: v4.5.0
     hooks:
     -   id: trailing-whitespace
     -   id: end-of-file-fixer
     -   id: check-yaml
     -   id: check-added-large-files
+    -   id: check-merge-conflict
+    -   id: check-ast
+    -   id: double-quote-string-fixer
+    -   id: debug-statements
+    -   id: check-toml
+    -   id: check-json
+    -   id: check-xml
+    -   id: check-docstring-first
+
+# repos:
+# -   repo: https://github.com/hhatto/autopep8
+#     rev: ...  # select the tag or revision you want, or run `pre-commit autoupdate`
+#     hooks:
+#     -   id: autopep8
+
+- repo: local
+  hooks:
+    - id: pylint
+      name: pylint
+      entry: pylint
+      language: system
+      types: [python]
+      args:
+        [
+          "-rn", # Only display messages
+          "-sn", # Don't display the score
+        ]
