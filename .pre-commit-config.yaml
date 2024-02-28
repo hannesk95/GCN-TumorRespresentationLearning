@@ -27,7 +27,7 @@ repos:
   hooks:
     - id: pylint
       name: pylint
-      entry: pylint
+      entry: /home/johannes/anaconda3/envs/viewGCN/lib/python3.8/site-packages/pylint/
       language: system
       types: [python]
       args:
