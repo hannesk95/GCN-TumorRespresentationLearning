@@ -141,7 +141,6 @@ if __name__ == '__main__':
     print(f'MCC:  {matthews_corrcoef(true, pred)}')
     print(f'AUC:  {roc_auc_score(true, score)}')
 
-
     print(f'F1-Score: {np.mean(f1_list)}')
     print(f'std:      {np.std(f1_list)}')
     print(f'MCC:      {np.mean(mcc_list)}')
