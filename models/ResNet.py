@@ -720,12 +720,12 @@ def create_resnet(
         (nn.Module): basic resnet.
     """
 
-    torch._C._log_api_usage_once("PYTORCHVIDEO.model.create_resnet")
+    torch._C._log_api_usage_once('PYTORCHVIDEO.model.create_resnet')
 
     # Given a model depth, get the number of blocks for each stage.
     assert (
         model_depth in _MODEL_STAGE_DEPTH.keys()
-    ), f"{model_depth} is not in {_MODEL_STAGE_DEPTH.keys()}"
+    ), f'{model_depth} is not in {_MODEL_STAGE_DEPTH.keys()}'
     stage_depths = _MODEL_STAGE_DEPTH[model_depth]
 
     # Broadcast single element to tuple if given.
@@ -1223,7 +1223,7 @@ class SeparableBottleneckBlock(nn.Module):
         act_b: nn.ModuleList,
         conv_c: nn.Module,
         norm_c: nn.Module,
-        reduce_method: str = "sum",
+        reduce_method: str = 'sum',
     ) -> None:
         """
         Args:
@@ -1242,8 +1242,8 @@ class SeparableBottleneckBlock(nn.Module):
         set_attributes(self, locals())
         assert all(
             op is not None for op in (self.conv_b, self.conv_c)
-        ), f"{self.conv_a}, {self.conv_b}, {self.conv_c} has None"
-        assert reduce_method in ["sum", "cat"]
+        ), f'{self.conv_a}, {self.conv_b}, {self.conv_c} has None'
+        assert reduce_method in ['sum', 'cat']
         if self.norm_c is not None:
             # This flag is used for weight initialization.
             self.norm_c.block_final_bn = True
@@ -1267,9 +1267,9 @@ class SeparableBottleneckBlock(nn.Module):
             if self.act_b[ind] is not None:
                 x_ = self.act_b[ind](x_)
             output.append(x_)
-        if self.reduce_method == "sum":
+        if self.reduce_method == 'sum':
             x = torch.stack(output, dim=0).sum(dim=0, keepdim=False)
-        elif self.reduce_method == "cat":
+        elif self.reduce_method == 'cat':
             x = torch.cat(output, dim=1)
 
         # Branch2c, for example 1x1x1, BN.
